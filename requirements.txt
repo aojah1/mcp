@@ -1,0 +1,14 @@
+#requirements
+
+yfinance
+asyncio
+langchain-mcp-adapters
+langchain-openai
+langgraph
+fastmcp
+markitdown>=0.0.1a3
+mcp>=1.2.1
+oracledb>=2.0.0
+python-dotenv>=1.0.0
+streamlit
+appdirs
