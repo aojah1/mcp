@@ -11,11 +11,14 @@ from mcp.client.stdio import stdio_client
 from langchain_core.messages import HumanMessage
 
 # ---------- env / model ----------
+#load_dotenv(Path("~/PycharmProjects/mcp/.env"))
 load_dotenv()
 model = ChatOpenAI(model="gpt-4o")
 
 # ---------- server descriptors ----------
-BASE = Path("/home/ubuntu/mcp/oci-langraph-mcp/mcp_server")
+BASE = (Path("~/PycharmProjects/mcp/mcp_server")
+        .expanduser()
+        .resolve())
 
 math_server  = StdioServerParameters(
     command="python", args=[str(BASE / "math_server.py")]
