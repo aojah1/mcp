@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, os
 from contextlib import AsyncExitStack
 from dotenv import load_dotenv
 from pathlib import Path
@@ -11,8 +11,9 @@ from mcp.client.stdio import stdio_client
 from langchain_core.messages import HumanMessage
 
 # ---------- env / model ----------
-#load_dotenv(Path("~/PycharmProjects/mcp/.env"))
-load_dotenv()
+venv_root = Path("/Users/aojah/PycharmProjects/mcp/.venv/.env")   # set automatically on activation
+
+load_dotenv(venv_root)
 model = ChatOpenAI(model="gpt-4o")
 
 # ---------- server descriptors ----------
