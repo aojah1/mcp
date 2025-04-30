@@ -5,7 +5,7 @@ import yfinance as yf
 from fastmcp import FastMCP
 from pandas import DataFrame
 
-mcp_stock_server = FastMCP("stocks1")
+mcp_stock_server = FastMCP("stocks")
 
 @mcp_stock_server.tool()
 def fetch_stock_info(symbol: str) -> dict:
