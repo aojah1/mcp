@@ -65,5 +65,51 @@ print("FastMCP server initialized", file=sys.stderr)
 
 # (All your tools: get_table_schema, rebuild_schema_cache, etc. remain exactly same below.)
 
+@mcp.tool()
+async def get_table_indexes(table_name: str, ctx: Context) -> str:
+    """
+    Get indexes defined on a table to understand and optimize query performance.
+    Essential for query optimization and understanding performance characteristics of the table.
+    Use this information when diagnosing slow queries, optimizing SELECT statements, or deciding
+    whether to create new indexes for performance improvements.
+
+    The tool returns all indexes on the specified table, including their names, column lists, uniqueness flag,
+    tablespace information, and status. Understanding indexes is critical for performance tuning as they
+    significantly affect how quickly data can be retrieved, especially for large tables. Regular indexes
+    speed up searches, while unique indexes also enforce data uniqueness constraints.
+
+    Args:
+        table_name: The name of the table to get indexes for (case-insensitive). Must be an exact table name.
+
+    Returns:
+        A formatted string containing the table's indexes including column information, uniqueness flags,
+        tablespace information, and status. Returns an error message if the table has no indexes or if
+        an error occurs during retrieval.
+    """
+    db_context: DatabaseContext = ctx.request_context.lifespan_context
+
+    try:
+        indexes = await db_context.get_table_indexes(table_name)
+
+        if not indexes:
+            return f"No indexes found for table '{table_name}'"
+
+        results = [f"Indexes for table '{table_name}':"]
+
+        for idx in indexes:
+            idx_type = "UNIQUE " if idx.get('unique', False) else ""
+            results.append(f"\n{idx_type}Index: {idx['name']}")
+            results.append(f"Columns: {', '.join(idx['columns'])}")
+
+            if 'tablespace' in idx:
+                results.append(f"Tablespace: {idx['tablespace']}")
+
+            if 'status' in idx:
+                results.append(f"Status: {idx['status']}")
+
+        return "\n".join(results)
+    except Exception as e:
+        return f"Error retrieving indexes: {str(e)}"
+
 if __name__ == "__main__":
     mcp.run(transport="stdio")

@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/mcp.iml" filepath="$PROJECT_DIR$/.idea/mcp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../mcp-redis/.idea/mcp-redis.iml" filepath="$PROJECT_DIR$/../mcp-redis/.idea/mcp-redis.iml" />
     </modules>
   </component>
 </project>

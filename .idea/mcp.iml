@@ -6,6 +6,7 @@
     </content>
     <orderEntry type="jdk" jdkName="Python 3.9 (mcp)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="mcp-redis" />
   </component>
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
