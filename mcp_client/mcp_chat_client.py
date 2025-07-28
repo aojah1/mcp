@@ -2,7 +2,7 @@
 import asyncio
 from contextlib import AsyncExitStack
 from typing import List, Tuple, Awaitable, Callable
-
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_openai import ChatOpenAI
@@ -12,13 +12,20 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 # ---------- env / model ----------
-load_dotenv()                      # pulls in OPENAI_API_KEY, etc.
-MODEL_NAME = "gpt-4o"              # change if you like
+venv_root = Path("/Users/aojah/PycharmProjects/mcp/.venv/.env")   # set automatically on activation
+
+load_dotenv(venv_root)
+model = ChatOpenAI(model="gpt-4o")
+
+
+
+MCP_SERVER_DIR = Path(__file__).resolve().parent.parent / "mcp_server"
+
 
 # ---------- server descriptors ----------
 SERVERS: List[StdioServerParameters] = [
-    StdioServerParameters(command="python", args=["mcp_math_server.py"]),
-    StdioServerParameters(command="python", args=["stock_server.py"]),
+    StdioServerParameters(command="python", args=[str(MCP_SERVER_DIR / "math_server.py")]),
+    StdioServerParameters(command="python", args=[str(MCP_SERVER_DIR / "stock_server.py")]),
 ]
 
 
@@ -49,7 +56,7 @@ async def _startup() -> Tuple[object, Callable[[], Awaitable[None]]]:
     print()
 
     # 3. build ReAct agent (default prompt already matches LangGraph vars)
-    model = ChatOpenAI(model=MODEL_NAME)
+
     agent = create_react_agent(model, tools)
 
     async def _shutdown() -> None:
@@ -79,7 +86,8 @@ async def shutdown_agent():
     _agent_singleton = _shutdown_singleton = None
 
 
-async def process_message(agent, user_text: str) -> str:
+async def process_message(user_text: str) -> str:
+    agent = await init_agent()
     """Send one user turn and return the assistant’s reply."""
     result = await agent.ainvoke({"messages": [HumanMessage(content=user_text)]})
 
@@ -87,4 +95,8 @@ async def process_message(agent, user_text: str) -> str:
     for msg in reversed(result["messages"]):
         if isinstance(msg, AIMessage):
             return msg.content
+    #shutdown_agent()
     return "<<no assistant response>>"
+
+if __name__ == "__main__":
+    asyncio.run(process_message(user_text="add 1 + 1"))
