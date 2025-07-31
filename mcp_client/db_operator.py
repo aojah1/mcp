@@ -12,6 +12,7 @@ from langchain_core.messages import HumanMessage
 # For OCI GenAI Service
 from langchain_community.chat_models.oci_generative_ai import ChatOCIGenAI
 from langchain.agents import initialize_agent, Tool, AgentType
+from langchain_core.messages import AIMessage
 
 def grok():
     # coding: utf-8
@@ -133,6 +134,51 @@ promt_oracle_db_operator = """This agent executes SQL queries in an Oracle datab
     Please apply this format consistently to all SQL queries you generate, using your actual model name and version in the comment
 
 """
+from langchain_core.tools import StructuredTool
+from pydantic import BaseModel, Field
+import asyncio
+
+# Global Auto-Approve flag: Set to 'Y' to auto-approve all SQL executions without user prompt,
+# or 'N' to ask for permission each time.
+AUTO_APPROVE = 'N'  # Change to 'Y' for auto-approval
+
+class RunSQLInput(BaseModel):
+    sql: str = Field(description="The SQL query to execute.")
+    model: str = Field(description="The name and version of the LLM (Large Language Model) you are using, with no additional information.")
+    mcp_client: str = Field(description="The name of the MCP (Model Context Protocol) client you are using, with no additional information.")
+
+def user_confirmed_tool(tool):
+    async def wrapper(sql: str, model: str, mcp_client: str):
+        sql_query = sql
+
+        # Check Auto-Approve flag
+        if AUTO_APPROVE == 'Y':
+            approved = True
+        else:
+            print(f"\n\033[93mA SQL query is about to be executed by the agent:\033[0m")
+            print(f"\033[97m{sql_query}\033[0m")
+            confirmation = await asyncio.to_thread(input, "ALLOW this SQL execution? (y/n): ")
+            approved = confirmation.lower() in {'y', 'yes'}
+
+        if approved:
+            # Call the original tool asynchronously if it supports it, else sync
+            if hasattr(tool, 'ainvoke'):
+                return await tool.ainvoke({"sql": sql, "model": model, "mcp_client": mcp_client})
+            elif hasattr(tool, 'invoke'):
+                return tool.invoke({"sql": sql, "model": model, "mcp_client": mcp_client})
+            else:
+                return tool.run(sql, model, mcp_client)
+        else:
+            # Return a message that instructs the agent to stop and finalize without retrying
+            return "Error: SQL execution was aborted by the user. Do not attempt to run any more SQL queries or tools. Provide the final answer based on available information immediately."
+
+    # Return as StructuredTool with coroutine for async support
+    return StructuredTool(
+        name=tool.name,
+        description=tool.description,
+        args_schema=RunSQLInput,
+        coroutine=wrapper,  # Use coroutine for async invocation
+    )
 
 async def main() -> None:
     async with AsyncExitStack() as stack:
@@ -150,63 +196,71 @@ async def main() -> None:
         await asyncio.gather(math_session.initialize(), stock_session.initialize(), adb_session.initialize())
         tools  = (await load_mcp_tools(math_session)) + (await load_mcp_tools(stock_session)) + (await load_mcp_tools(adb_session))
 
+        # -------- Wrap SQL tools for user-in-the-loop confirmation -----------
+        def is_sql_tool(tool):
+            # Check for 'adb', 'sql', or 'oracle' in the tool name
+            return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
 
-
-        # 4. build the agent
-        #agent = create_react_agent(model, tools)
-        # Initialize an agent using:
-        # - The defined tools
-        # - The Cohere LLM
-        # - A ReAct-style agent type that allows the LLM to decide what tool to call step-by-step
-        # - verbose=True to print internal thought process
+        wrapped_tools = []
+        for t in tools:
+            if is_sql_tool(t):  # your own checker function
+                wrapped_tools.append(user_confirmed_tool(t))
+            else:
+                wrapped_tools.append(t)
+        
+        # -----------------------------------------------------------------------
 
         agent = initialize_agent(
-            tools=tools,
+            tools=wrapped_tools,
             llm=model,
-            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION  ,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
             handle_parsing_errors=True,
             verbose=True,
         )
 
-        # ⏳ short-term memory (max 10 messages = 5 user + 5 AI)
+        # ⏳ short-term memory (max 30 messages = 15 user + 15 AI)
         message_history = []
 
 
         # 5. interactive loop
         print("Type a question (empty / 'exit' to quit):")
         while True:
-            user_input = await asyncio.to_thread(input, "You: ")
-            if user_input.strip().lower() in {"exit", "quit"}:
-                print("👋  Bye!")
-                break
+            try:
+                user_input = await asyncio.to_thread(input, "You: ")
+                if user_input.strip().lower() in {"exit", "quit"}:
+                    print("👋  Bye!")
+                    break
 
-            # Add user's message
-            message_history.append(HumanMessage(content=user_input))
+                # Add user's message
+                message_history.append(HumanMessage(content=user_input))
 
-            # Keep only the last 10 messages
-            message_history = message_history[-10:]
+                # Keep only the last 10 messages
+                message_history = message_history[-30:]
 
-            from langchain_core.messages import AIMessage
+                # Invoke agent
+                ai_response = await agent.ainvoke({"input": message_history})
+                msg = ai_response.get("output") if isinstance(ai_response, dict) else ai_response
 
-            # Invoke agent
-            ai_response = await agent.ainvoke({"input": message_history})
-            msg = ai_response.get("output") if isinstance(ai_response, dict) else ai_response
+                # Try to parse or wrap the output
+                if isinstance(msg, AIMessage):
+                    message_history.append(msg)
+                    print(f"AI: {msg.content}\n")
+                elif isinstance(msg, str):
+                    ai_msg = AIMessage(content=msg)
+                    message_history.append(ai_msg)
+                    print(f"AI: {msg}\n")
+                else:
+                    print("AI: <<no response>>\n")
 
-            # Try to parse or wrap the output
-            if isinstance(msg, AIMessage):
-                message_history.append(msg)
-                print(f"AI: {msg.content}\n")
-            elif isinstance(msg, str):
-                ai_msg = AIMessage(content=msg)
-                message_history.append(ai_msg)
-                print(f"AI: {msg}\n")
-            else:
-                print("AI: <<no response>>\n")
-
-            # Trim history
-            message_history = message_history[-10:]
+                # Trim history
+                message_history = message_history[-30:]
+            except Exception as e:
+                print(f"❌ Error: {e}\n")
+                continue
 
 
 if __name__ == "__main__":
     #grok()
     asyncio.run(main())
+
+    
