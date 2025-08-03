@@ -13,7 +13,7 @@ from langchain_core.messages import HumanMessage
 from langchain_community.chat_models.oci_generative_ai import ChatOCIGenAI
 from langchain.agents import initialize_agent, Tool, AgentType
 from langchain_core.messages import AIMessage
-
+from langchain_core.messages import AIMessage
 
 
 def initialize_llm():
@@ -69,19 +69,19 @@ promt_oracle_db_operator = """This agent executes SQL queries in an Oracle datab
     For every SQL query you generate, please include a comment at the beginning of the 
     SELECT statement (or other main SQL command) that identifies the LLM model name and version you 
     are using. Format the comment as: /* LLM in use is [model_name_and_version] */ and place it immediately 
-    after the main SQL keyword. For example: SELECT /* LLM in use is llama3.3-70B */ column1, 
-    column2 FROM table_name; INSERT /* LLM in use is llama3.3-70B */ INTO table_name VALUES (...); 
-    UPDATE /* LLM in use is llama3.3-70B */ table_name SET ...; 
+    after the main SQL keyword. For example: SELECT /* LLM in use is llama4-Maverick */ column1, 
+    column2 FROM table_name; INSERT /* LLM in use is llama4-Maveric */ INTO table_name VALUES (...); 
+    UPDATE /* LLM in use is llama4-Maveric */ table_name SET ...; 
     Please apply this format consistently to all SQL queries you generate, using your actual model name and version in the comment
 
 """
+
+# Global Auto-Approve flag (will be set dynamically)
+AUTO_APPROVE = 'N'  # Default to 'N'
+
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 import asyncio
-
-# Global Auto-Approve flag: Set to 'Y' to auto-approve all SQL executions without user prompt,
-# or 'N' to ask for permission each time.
-AUTO_APPROVE = 'N'  # Change to 'Y' for auto-approval
 
 class RunSQLInput(BaseModel):
     sql: str = Field(description="The SQL query to execute.")
@@ -123,50 +123,56 @@ def user_confirmed_tool(tool):
 
 async def main() -> None:
     async with AsyncExitStack() as stack:
-        # 1. start each server, keep pipes open
-        math_read,  math_write  = await stack.enter_async_context(stdio_client(math_server))
-        stock_read, stock_write = await stack.enter_async_context(stdio_client(stock_server))
-        adb_read, adb_write = await stack.enter_async_context(stdio_client(adb_server))
+        try:
+            # 1. start each server, keep pipes open
+            math_read,  math_write  = await stack.enter_async_context(stdio_client(math_server))
+            stock_read, stock_write = await stack.enter_async_context(stdio_client(stock_server))
+            adb_read, adb_write = await stack.enter_async_context(stdio_client(adb_server))
 
-        # 2. open a ClientSession for each
-        math_session  = await stack.enter_async_context(ClientSession(math_read,  math_write))
-        stock_session = await stack.enter_async_context(ClientSession(stock_read, stock_write))
-        adb_session = await stack.enter_async_context(ClientSession(adb_read, adb_write))
+            # 2. open a ClientSession for each
+            math_session  = await stack.enter_async_context(ClientSession(math_read,  math_write))
+            stock_session = await stack.enter_async_context(ClientSession(stock_read, stock_write))
+            adb_session = await stack.enter_async_context(ClientSession(adb_read, adb_write))
 
-        # 3. handshake & discover tools
-        await asyncio.gather(math_session.initialize(), stock_session.initialize(), adb_session.initialize())
-        tools  = (await load_mcp_tools(math_session)) + (await load_mcp_tools(stock_session)) + (await load_mcp_tools(adb_session))
+            # 3. handshake & discover tools
+            await asyncio.gather(math_session.initialize(), stock_session.initialize(), adb_session.initialize())
+            tools  = (await load_mcp_tools(math_session)) + (await load_mcp_tools(stock_session)) + (await load_mcp_tools(adb_session))
 
-        # -------- Wrap SQL tools for user-in-the-loop confirmation -----------
-        def is_sql_tool(tool):
-            # Check for 'adb', 'sql', or 'oracle' in the tool name
-            return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
+            # -------- Wrap SQL tools for user-in-the-loop confirmation -----------
+            def is_sql_tool(tool):
+                # Check for 'adb', 'sql', or 'oracle' in the tool name
+                return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
 
-        wrapped_tools = []
-        for t in tools:
-            if is_sql_tool(t):  # your own checker function
-                wrapped_tools.append(user_confirmed_tool(t))
-            else:
-                wrapped_tools.append(t)
-        
-        # -----------------------------------------------------------------------
+            wrapped_tools = []
+            for t in tools:
+                if is_sql_tool(t):
+                    wrapped_tools.append(user_confirmed_tool(t))
+                else:
+                    wrapped_tools.append(t)
+            # -----------------------------------------------------------------------
 
-        agent = initialize_agent(
-            tools=wrapped_tools,
-            llm=model,
-            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-            handle_parsing_errors=True,
-            verbose=True,
-        )
+            # Prompt for Auto-Approve at the beginning, styled like the user input box
+            global AUTO_APPROVE
+            print("Do you want to auto-approve all SQL executions without prompting each time? (y/n):")
+            confirmation = await asyncio.to_thread(input, "You: ")
+            AUTO_APPROVE = 'Y' if confirmation.lower() in {'y', 'yes'} else 'N'
 
-        # ⏳ short-term memory (max 30 messages = 15 user + 15 AI)
-        message_history = []
+            # 4. build the agent
+            agent = initialize_agent(
+                tools=wrapped_tools,
+                llm=model,
+                agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                handle_parsing_errors=True,
+                verbose=True,
+                agent_kwargs={"prefix": promt_oracle_db_operator},  # Pass the system message here
+            )
 
+            # ⏳ short-term memory (max 30 messages = 15 user + 15 AI)
+            message_history = []
 
-        # 5. interactive loop
-        print("Type a question (empty / 'exit' to quit):")
-        while True:
-            try:
+            # 5. interactive loop
+            print("Type a question (empty / 'exit' to quit):")
+            while True:
                 user_input = await asyncio.to_thread(input, "You: ")
                 if user_input.strip().lower() in {"exit", "quit"}:
                     print("👋  Bye!")
@@ -195,13 +201,11 @@ async def main() -> None:
 
                 # Trim history
                 message_history = message_history[-30:]
-            except Exception as e:
-                print(f"❌ Error: {e}\n")
-                continue
-
+        except Exception as e:
+            print(f"\n❌ An error occurred during execution: {str(e)}")
+            print("Please check your setup and try again. Exiting...")
+            # Optional: Add any cleanup here if needed (e.g., close sessions manually)
 
 if __name__ == "__main__":
     #grok()
     asyncio.run(main())
-
-    

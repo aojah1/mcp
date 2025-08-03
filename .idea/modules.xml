@@ -2,6 +2,11 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/../adk_projects/.idea/adk_projects.iml" filepath="$PROJECT_DIR$/../adk_projects/.idea/adk_projects.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../agents/.idea/agents.iml" filepath="$PROJECT_DIR$/../agents/.idea/agents.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../langchain-academy/.idea/langchain-academy.iml" filepath="$PROJECT_DIR$/../langchain-academy/.idea/langchain-academy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../langgraph/.idea/langgraph.iml" filepath="$PROJECT_DIR$/../langgraph/.idea/langgraph.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../langgraph-swarm-py/.idea/langgraph-swarm-py.iml" filepath="$PROJECT_DIR$/../langgraph-swarm-py/.idea/langgraph-swarm-py.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/mcp.iml" filepath="$PROJECT_DIR$/.idea/mcp.iml" />
       <module fileurl="file://$PROJECT_DIR$/../mcp_redis/.idea/mcp_redis.iml" filepath="$PROJECT_DIR$/../mcp_redis/.idea/mcp_redis.iml" />
     </modules>

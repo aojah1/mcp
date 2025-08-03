@@ -1,4 +1,6 @@
 .env
 .venv
+.venv_mcp
 Wallet_ADW
 Wallet_ADW.zip
+mcp_client/config/.env

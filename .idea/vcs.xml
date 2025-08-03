@@ -2,6 +2,12 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../adk_projects" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../agents" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../langchain-academy" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../langgraph" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../langgraph-swarm-py" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../mcp_redis" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../outraining/ou-generativeai-pro" vcs="Git" />
   </component>
 </project>
