@@ -1,8 +1,12 @@
-### Model Context Protocol (MCP) is an open standard that enables developers to build secure, two‑way connections between their data sources and AI-powered tools, acting like a “USB‑C port” for AI models to access external context
+#### Model Context Protocol (MCP) is an open standard that enables developers to build secure, two‑way connections between their data sources and AI-powered tools, acting like a “USB‑C port” for AI models to access external context
 
 Getting started with OCI Agents in 2 step :
+### Step 1) Configure MCP Server
+> Follow the steps per this document to configure MCP Server for SQLcli: 
 
-### Configure your development environment
+> https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html
+
+### Step 2) Configure your development environment
 > Fork the repository
 > https://github.com/aojah1/mcp
 > 
@@ -10,7 +14,7 @@ Getting started with OCI Agents in 2 step :
 > 
 > git clone https://github.com/<your_user_name>/mcp.git
 
-## Optional commands
+### Optional commands
     How to actually get Python 3.13 on macOS (change it for your machine)
     Option 1 : Homebrew (simplest)
     brew update
@@ -25,18 +29,19 @@ Getting started with OCI Agents in 2 step :
     pyenv global 3.13.0
     python --version                  # now 3.13.0
 
-## Client Library
+### Client Library
     cd mcp_client
 
-## Configuring and running the agent
+### Configuring and running the agent
     python3.13 -m venv .venv_mcp
     source .venv_mcp/bin/activate
 
-## Installing all the required packages
+### Installing all the required packages
 
-# After you create a project and a virtual environment, install the latest version of required packages:
-    python3.13 -m pip install -r requirements.txt
+After you create a project and a virtual environment, install the latest version of required packages:
+> python3.13 -m pip install -r requirements.txt
 
-## Configuring your .env (config) file
+### Configuring your .env (config) file
 > Rename the mcp_client/config/sample_.env to mcp_client/config/.env
+> 
 > Change the config variables based on your agents requirements
