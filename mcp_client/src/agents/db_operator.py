@@ -31,6 +31,9 @@ from src.prompt_engineering.topics.db_operator import promt_oracle_db_operator
 from src.llm.oci_genai_agent import rag_agent_service
 from langchain_core.tools import tool
 
+import warnings
+warnings.filterwarnings("ignore")
+
 # ────────────────────────────────────────────────────────
 # 1) bootstrap paths + env + llm
 # ────────────────────────────────────────────────────────
@@ -46,6 +49,7 @@ AGENT_EP_ID = os.getenv("AGENT_EP_ID")
 AGENT_SERVICE_EP = os.getenv("AGENT_SERVICE_EP")
 AGENT_KB_ID = os.getenv("AGENT_KB_ID")
 AGENT_REGION = os.getenv("AGENT_REGION")
+SQLCLI_MCP_PROFILE = os.getenv("SQLCLI_MCP_PROFILE")
 
 # ────────────────────────────────────────────────────────
 # 2) Logic
@@ -55,7 +59,7 @@ model = initialize_llm()
 
 # ---------- server descriptors ----------
 adb_server = StdioServerParameters(
-    command="/Applications/sqlcl/bin/sql", args=["-mcp"]
+    command=SQLCLI_MCP_PROFILE, args=["-mcp"]
 )
 
 
@@ -69,17 +73,23 @@ import asyncio
 class RunSQLInput(BaseModel):
     sql: str = Field(default="select sysdate from dual", description="The SQL query to execute.")
     model: str = Field(default="oci/generativeai-chat:2024-05-01", description="The name and version of the LLM (Large Language Model) you are using.")
-    mcp_client: str = Field(default="sqlcl", description="The name of the MCP (Model Context Protocol) client you are using.")
+    sqlcl: str = Field(default="sqlcl", description="The name or path of the SQLcl MCP client.")  # Changed from mcp_client to sqlcl
 
 def user_confirmed_tool(tool):
-    async def wrapper(sql: str, model: str = None, mcp_client: str = None):
-        sql_query = sql
+    async def wrapper(*args, **kwargs):
+        # Support raw string input or keyword arguments (from structured agent)
+        if args and isinstance(args[0], str):
+            sql_query = args[0]
+            model = "oci/generativeai-chat:2024-05-01"
+            sqlcl_param = "sqlcl"  # Default
+        else:
+            sql_query = kwargs.get("sql", "select sysdate from dual")
+            model = kwargs.get("model", "oci/generativeai-chat:2024-05-01")
+            sqlcl_param = kwargs.get("sqlcl", "sqlcl")  # Changed key to sqlcl
 
-        # Fill in default values if missing
-        model = model or "oci/generativeai-chat:2024-05-01"
-        mcp_client = mcp_client or "sqlcl"
+        # Debug logging
+        print(f"DEBUG: Preparing payload - SQL: {sql_query}, Model: {model}, SQLCL: {sqlcl_param}")
 
-        # Check Auto-Approve flag
         if AUTO_APPROVE == 'Y':
             approved = True
         else:
@@ -89,15 +99,22 @@ def user_confirmed_tool(tool):
             approved = confirmation.lower() in {'y', 'yes'}
 
         if approved:
-            payload = {"sql": sql_query, "model": model, "mcp_client": mcp_client}
-            if hasattr(tool, 'ainvoke'):
-                return await tool.ainvoke(payload)
-            elif hasattr(tool, 'invoke'):
-                return tool.invoke(payload)
-            else:
-                return tool.run(**payload)
+            payload = {
+                "sql": sql_query,
+                "model": model,
+                "sqlcl": sqlcl_param  # Changed key to sqlcl
+            }
+            try:
+                if hasattr(tool, 'ainvoke'):
+                    return await tool.ainvoke(payload)
+                elif hasattr(tool, 'invoke'):
+                    return tool.invoke(payload)
+                else:
+                    return tool.run(**payload)
+            except Exception as e:
+                return f"ERROR: Failed to execute SQLcl tool - {str(e)}\nIf 'sqlcl parameter is required', ensure SQLcl is installed and in PATH."
         else:
-            return "Error: SQL execution was aborted by the user. Do not attempt to run any more SQL queries or tools. Provide the final answer based on available information immediately."
+            return "⚠️ Execution cancelled by user."
 
     return StructuredTool(
         name=tool.name,
@@ -129,21 +146,23 @@ async def main() -> None:
 
         try:
             # Load tools
+            original_tools = await load_mcp_tools(adb_session)
             tools = []
-            if adb_session:
-                tools = await load_mcp_tools(adb_session)
-            tools += [_rag_agent_service]  # Always add RAG tool
 
-            # Wrap SQL tools for user confirmation
             def is_sql_tool(tool):
                 return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
 
-            wrapped_tools = []
-            for t in tools:
+            for t in original_tools:
                 if is_sql_tool(t):
-                    wrapped_tools.append(user_confirmed_tool(t))
+                    wrapped = user_confirmed_tool(t)
+                    wrapped.name = t.name  # overwrite name so "run-sqlcl" matches
+                    tools.append(wrapped)
                 else:
-                    wrapped_tools.append(t)
+                    tools.append(t)
+
+            tools.append(_rag_agent_service)  # Add your RAG tool
+
+            print(f"✅ Registered tools: {[t.name for t in tools]}")
 
             # Prompt for auto-approval
             global AUTO_APPROVE
@@ -153,7 +172,7 @@ async def main() -> None:
 
             # Initialize agent
             agent = initialize_agent(
-                tools=wrapped_tools,
+                tools=tools,
                 llm=model,
                 agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
                 handle_parsing_errors=True,
