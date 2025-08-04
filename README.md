@@ -58,6 +58,7 @@ https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug
 ### Test DB Operator Agent
 
 ====================================
+
 DBA with Sys access
 ===================================
 Connect to Oracle DB -
@@ -78,6 +79,7 @@ Document the Environment
     Capture system architecture, version details, and patch level
 
 ========================================
+
 DB Developer with schema access only
 =========================================
 what schema I have access to 
