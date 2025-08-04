@@ -54,3 +54,45 @@ This agent integrates with Oracle DB SQLCl MCP Server, allowing NL conversation 
 
 https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html
 > python3.13 -m src.agents.db_operator
+> 
+### Test DB Operator Agent
+
+====================================
+DBA with Sys access
+===================================
+Connect to Oracle DB -
+    show me all connections
+
+    use adk_mcp1 to connect
+
+Verify the Installation - 
+    which user I am connecting with 
+
+    list tablespace utilization and free space
+
+    Verify database accessibility via sqlplus or SQL Developer
+
+Document the Environment
+    Record SID, DB name, listener ports, admin passwords (securely)
+
+    Capture system architecture, version details, and patch level
+
+========================================
+DB Developer with schema access only
+=========================================
+what schema I have access to 
+going forward by default use the schema <<Your Schema >> every time
+
+    create all the related tables as described in the following ERD. Use Oracle 23.AI JSON database type to create all the tables : 
+
+    organizations
+     ├── departments
+     │    ├── employees
+     │    │    └── roles
+     │    └── budgets
+     ├── goals
+     │    └── objectives
+     │         └── key_results
+     └── projects
+          ├── tasks
+          └── milestones
