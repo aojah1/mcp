@@ -45,3 +45,9 @@ After you create a project and a virtual environment, install the latest version
 > Rename the mcp_client/config/sample_.env to mcp_client/config/.env
 > 
 > Change the config variables based on your agents requirements
+
+### Build/Deploy an DB Operator Agent
+This agent integrates with Oracle DB SQLCl MCP Server, allowing NL conversation with any Oracle Database (19 c or higher).
+
+https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html
+> python3.13 -m src.agents.db_operator
