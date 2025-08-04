@@ -62,19 +62,22 @@ https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug
 ### DBA with Sys access
 ===================================
 
-Connect to Oracle DB -
+> Connect to Oracle DB -
+
     show me all connections
 
-    use adk_mcp1 to connect
+    use <your connections> to connect
 
-Verify the Installation - 
+> Verify the Installation - 
+
     which user I am connecting with 
 
     list tablespace utilization and free space
 
     Verify database accessibility via sqlplus or SQL Developer
 
-Document the Environment
+> Document the Environment
+
     Record SID, DB name, listener ports, admin passwords (securely)
 
     Capture system architecture, version details, and patch level
@@ -84,8 +87,9 @@ Document the Environment
 ### DB Developer with schema access only
 =========================================
 
-what schema I have access to 
-going forward by default use the schema <<Your Schema >> every time
+    what schema I have access to 
+
+    going forward by default use the schema <<Your Schema >> every time
 
     create all the related tables as described in the following ERD. Use Oracle 23.AI JSON database type to create all the tables : 
 
