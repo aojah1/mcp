@@ -1,6 +1,9 @@
 #### Model Context Protocol (MCP) is an open standard that enables developers to build secure, two‑way connections between their data sources and AI-powered tools, acting like a “USB‑C port” for AI models to access external context
 
 Getting started with OCI Agents in 2 step :
+
+![db_operator.png](mcp_client/images/db_operator.png)
+
 ### Step 1) Configure MCP Server
 > Follow the steps per this document to configure MCP Server for SQLcli: 
 
