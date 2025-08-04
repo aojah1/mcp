@@ -63,32 +63,10 @@ def rag_agent_service(inp: str):
 # Test Cases -
 def test_case():
     #The logged in user ID is: user_123. What is the response API ?
-    response = rag_agent_service("what is the tax M&E adjustment for entity 1000 ?")
+    response = rag_agent_service("Is a $500 client lunch at steakhouse deductible?")
 
     print(response.data.message.content.text)
 
-    print("CITATIONS : " )
-    print(# Extract Citation URL
-    print(response.data.message.content.citations[0].source_location.url))
-
-    response = rag_agent_service("Is my user account eligible for the Responses API?")
-    final_answer = extract_final_answer_from_chat_result(response)
-    print("Final Answer:", final_answer)
-
-
-def extract_final_answer_from_chat_result(response_obj):
-    try:
-        chat_result = response_obj.data  # This is a ChatResult object
-        traces = getattr(chat_result, "traces", [])
-        for trace in traces:
-            if getattr(trace, "trace_type", None) == "PLANNING_TRACE":
-                output = getattr(trace, "output", "")
-                match = re.search(r'"action":\s*"Final Answer".*?"action_inputs":\s*"([^"]+)"', output, re.DOTALL)
-                if match:
-                    return match.group(1).strip()
-        return "❌ Final answer not found in planning trace."
-    except Exception as e:
-        return f"❌ Error: {e}"
 
 
 if __name__ == "__main__":

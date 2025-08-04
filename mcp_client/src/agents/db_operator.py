@@ -28,9 +28,8 @@ from langchain.agents import initialize_agent, Tool, AgentType
 from langchain_core.messages import AIMessage
 from src.llm.oci_genai import initialize_llm
 from src.prompt_engineering.topics.db_operator import promt_oracle_db_operator
-from langchain_core.tools import StructuredTool
-from pydantic import BaseModel, Field
-import asyncio
+from src.llm.oci_genai_agent import rag_agent_service
+from langchain_core.tools import tool
 
 # ────────────────────────────────────────────────────────
 # 1) bootstrap paths + env + llm
@@ -68,13 +67,17 @@ from pydantic import BaseModel, Field
 import asyncio
 
 class RunSQLInput(BaseModel):
-    sql: str = Field(description="The SQL query to execute.")
-    model: str = Field(description="The name and version of the LLM (Large Language Model) you are using, with no additional information.")
-    mcp_client: str = Field(description="The name of the MCP (Model Context Protocol) client you are using, with no additional information.")
+    sql: str = Field(default="select sysdate from dual", description="The SQL query to execute.")
+    model: str = Field(default="oci/generativeai-chat:2024-05-01", description="The name and version of the LLM (Large Language Model) you are using.")
+    mcp_client: str = Field(default="sqlcl", description="The name of the MCP (Model Context Protocol) client you are using.")
 
 def user_confirmed_tool(tool):
-    async def wrapper(sql: str, model: str, mcp_client: str):
+    async def wrapper(sql: str, model: str = None, mcp_client: str = None):
         sql_query = sql
+
+        # Fill in default values if missing
+        model = model or "oci/generativeai-chat:2024-05-01"
+        mcp_client = mcp_client or "sqlcl"
 
         # Check Auto-Approve flag
         if AUTO_APPROVE == 'Y':
@@ -86,41 +89,53 @@ def user_confirmed_tool(tool):
             approved = confirmation.lower() in {'y', 'yes'}
 
         if approved:
-            # Call the original tool asynchronously if it supports it, else sync
+            payload = {"sql": sql_query, "model": model, "mcp_client": mcp_client}
             if hasattr(tool, 'ainvoke'):
-                return await tool.ainvoke({"sql": sql, "model": model, "mcp_client": mcp_client})
+                return await tool.ainvoke(payload)
             elif hasattr(tool, 'invoke'):
-                return tool.invoke({"sql": sql, "model": model, "mcp_client": mcp_client})
+                return tool.invoke(payload)
             else:
-                return tool.run(sql, model, mcp_client)
+                return tool.run(**payload)
         else:
-            # Return a message that instructs the agent to stop and finalize without retrying
             return "Error: SQL execution was aborted by the user. Do not attempt to run any more SQL queries or tools. Provide the final answer based on available information immediately."
 
-    # Return as StructuredTool with coroutine for async support
     return StructuredTool(
         name=tool.name,
         description=tool.description,
         args_schema=RunSQLInput,
-        coroutine=wrapper,  # Use coroutine for async invocation
+        coroutine=wrapper,
     )
+
+
+@tool
+def _rag_agent_service(inp: str):
+    """RAG AGENT"""
+    response  = rag_agent_service(inp)
+
+    return response.data.message.content.text
 
 async def main() -> None:
     async with AsyncExitStack() as stack:
+        adb_session = None  # Default in case connection fails
+
+        # Attempt SQLCL MCP connection
         try:
-            # 1. start each server, keep pipes open
             adb_read, adb_write = await stack.enter_async_context(stdio_client(adb_server))
-
-            # 2. open a ClientSession for each
             adb_session = await stack.enter_async_context(ClientSession(adb_read, adb_write))
+            await adb_session.initialize()
+        except Exception as conn_err:
+            print(f"\n❌ Could not connect to Oracle SQLCL MCP Server: {conn_err}")
+            print("⚠️  You can continue asking questions, but SQL tools will be unavailable.\n")
 
-            # 3. handshake & discover tools
-            await asyncio.gather(adb_session.initialize())
-            tools  = (await load_mcp_tools(adb_session))
+        try:
+            # Load tools
+            tools = []
+            if adb_session:
+                tools = await load_mcp_tools(adb_session)
+            tools += [_rag_agent_service]  # Always add RAG tool
 
-            # -------- Wrap SQL tools for user-in-the-loop confirmation -----------
+            # Wrap SQL tools for user confirmation
             def is_sql_tool(tool):
-                # Check for 'adb', 'sql', or 'oracle' in the tool name
                 return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
 
             wrapped_tools = []
@@ -129,28 +144,24 @@ async def main() -> None:
                     wrapped_tools.append(user_confirmed_tool(t))
                 else:
                     wrapped_tools.append(t)
-            # -----------------------------------------------------------------------
 
-            # Prompt for Auto-Approve at the beginning, styled like the user input box
+            # Prompt for auto-approval
             global AUTO_APPROVE
             print("Do you want to auto-approve all SQL executions without prompting each time? (y/n):")
             confirmation = await asyncio.to_thread(input, "You: ")
             AUTO_APPROVE = 'Y' if confirmation.lower() in {'y', 'yes'} else 'N'
 
-            # 4. build the agent
+            # Initialize agent
             agent = initialize_agent(
                 tools=wrapped_tools,
                 llm=model,
                 agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
                 handle_parsing_errors=True,
                 verbose=True,
-                agent_kwargs={"prefix": promt_oracle_db_operator},  # Pass the system message here
+                agent_kwargs={"prefix": promt_oracle_db_operator},
             )
 
-            # ⏳ short-term memory (max 30 messages = 15 user + 15 AI)
             message_history = []
-
-            # 5. interactive loop
             print("Type a question (empty / 'exit' to quit):")
             while True:
                 user_input = await asyncio.to_thread(input, "You: ")
@@ -158,33 +169,26 @@ async def main() -> None:
                     print("👋  Bye!")
                     break
 
-                # Add user's message
                 message_history.append(HumanMessage(content=user_input))
-
-                # Keep only the last 10 messages
                 message_history = message_history[-30:]
 
-                # Invoke agent
-                ai_response = await agent.ainvoke({"input": message_history})
-                msg = ai_response.get("output") if isinstance(ai_response, dict) else ai_response
+                try:
+                    ai_response = await agent.ainvoke({"input": message_history})
+                    msg = ai_response.get("output") if isinstance(ai_response, dict) else ai_response
+                    if isinstance(msg, AIMessage):
+                        message_history.append(msg)
+                        print(f"AI: {msg.content}\n")
+                    elif isinstance(msg, str):
+                        ai_msg = AIMessage(content=msg)
+                        message_history.append(ai_msg)
+                        print(f"AI: {msg}\n")
+                    else:
+                        print("AI: <<no response>>\n")
+                except Exception as agent_err:
+                    print(f"⚠️  Agent failed to respond: {agent_err}")
+        except Exception as final_err:
+            print(f"\n❌ Unhandled error: {final_err}")
 
-                # Try to parse or wrap the output
-                if isinstance(msg, AIMessage):
-                    message_history.append(msg)
-                    print(f"AI: {msg.content}\n")
-                elif isinstance(msg, str):
-                    ai_msg = AIMessage(content=msg)
-                    message_history.append(ai_msg)
-                    print(f"AI: {msg}\n")
-                else:
-                    print("AI: <<no response>>\n")
-
-                # Trim history
-                message_history = message_history[-30:]
-        except Exception as e:
-            print(f"\n❌ An error occurred during execution: {str(e)}")
-            print("Please check your setup and try again. Exiting...")
-            # Optional: Add any cleanup here if needed (e.g., close sessions manually)
 
 if __name__ == "__main__":
     #grok()
