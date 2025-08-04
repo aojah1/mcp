@@ -30,6 +30,7 @@ from src.llm.oci_genai import initialize_llm
 from src.prompt_engineering.topics.db_operator import promt_oracle_db_operator
 from src.llm.oci_genai_agent import rag_agent_service
 from langchain_core.tools import tool
+from langchain_core.agents import AgentFinish
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -193,7 +194,17 @@ async def main() -> None:
 
                 try:
                     ai_response = await agent.ainvoke({"input": message_history})
-                    msg = ai_response.get("output") if isinstance(ai_response, dict) else ai_response
+
+                    # Improved output extraction
+                    if isinstance(ai_response, dict):
+                        msg = ai_response.get("output")
+                    elif isinstance(ai_response, AgentFinish):
+                        # Handle AgentFinish: extract from return_values
+                        msg = ai_response.return_values.get("output")
+                    else:
+                        msg = ai_response  # Fallback for other types
+
+                    # Now process and print
                     if isinstance(msg, AIMessage):
                         message_history.append(msg)
                         print(f"AI: {msg.content}\n")
@@ -201,8 +212,13 @@ async def main() -> None:
                         ai_msg = AIMessage(content=msg)
                         message_history.append(ai_msg)
                         print(f"AI: {msg}\n")
+                    elif isinstance(msg, dict) and "content" in msg:
+                        # Handle if it's a dict with 'content' (e.g., parsed Final Answer)
+                        ai_msg = AIMessage(content=msg.get("content", "<<no content>>"))
+                        message_history.append(ai_msg)
+                        print(f"AI: {ai_msg.content}\n")
                     else:
-                        print("AI: <<no response>>\n")
+                        print("AI: <<no response>>\n")  # Only fallback if truly nothing
                 except Exception as agent_err:
                     print(f"⚠️  Agent failed to respond: {agent_err}")
         except Exception as final_err:

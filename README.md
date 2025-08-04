@@ -89,6 +89,8 @@ https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug
 
     what schema I have access to 
 
+    clear all memory
+
     going forward by default use the schema <<Your Schema >> every time
 
     create all the related tables as described in the following ERD. Use Oracle 23.AI JSON database type to create all the tables : 
@@ -104,3 +106,7 @@ https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug
      └── projects
           ├── tasks
           └── milestones
+
+Invoke the RAG Service with Oracle product documentation knowledge base
+
+    tell me what security process are available in oracle 23.ai
