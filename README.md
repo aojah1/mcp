@@ -61,6 +61,7 @@ https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug
 
 ### DBA with Sys access
 ===================================
+
 Connect to Oracle DB -
     show me all connections
 
@@ -82,6 +83,7 @@ Document the Environment
 
 ### DB Developer with schema access only
 =========================================
+
 what schema I have access to 
 going forward by default use the schema <<Your Schema >> every time
 
