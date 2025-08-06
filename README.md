@@ -7,7 +7,7 @@ Getting started with OCI Agents in 2 step :
 ### Step 1) Configure MCP Server
 > Follow the steps per this document to configure MCP Server for SQLcli: 
 
-> https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/using-oracle-sqlcl-mcp-server.html
+> https://docs.oracle.com/en/database/oracle/sql-developer-command-line/25.2/sqcug/preparing-your-environment.html
 
 ### Step 2) Configure your development environment
 > Fork the repository
