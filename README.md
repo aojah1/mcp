@@ -1,6 +1,6 @@
 #### Model Context Protocol (MCP) is an open standard that enables developers to build secure, two‑way connections between their data sources and AI-powered tools, acting like a “USB‑C port” for AI models to access external context
 
-Getting started with OCI Agents in 2 step :
+Getting started with Oracle AI Agents in 2 step :
 
 ![db_operator.png](mcp_client/images/db_operator.png)
 
@@ -48,6 +48,13 @@ After you create a project and a virtual environment, install the latest version
 > Rename the mcp_client/config/sample_.env to mcp_client/config/.env
 > 
 > Change the config variables based on your agents requirements
+
+### Security
+> The server uses OCI's built-in authentication and authorization mechanisms, including:
+
+> OCI config file-based authentication
+
+> Signer-based authentication for specific endpoints
 
 ### Build/Deploy an DB Operator Agent
 This agent integrates with Oracle DB SQLCl MCP Server, allowing NL conversation with any Oracle Database (19 c or higher).
