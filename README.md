@@ -50,7 +50,7 @@ After you create a project and a virtual environment, install the latest version
 > Change the config variables based on your agents requirements
 
 ### Security
-> The server uses OCI's built-in authentication and authorization mechanisms, including:
+The server uses OCI's built-in authentication and authorization mechanisms, including:
 
 > OCI config file-based authentication
 
