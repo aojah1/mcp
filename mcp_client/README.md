@@ -2,7 +2,7 @@
 
 Getting started with Oracle AI Agents in 2 step :
 
-![db_operator.png](mcp_client/images/db_operator.png)
+![db_operator.png](/mcp_client/images/db_operator.png)
 
 ### Step 1) Configure MCP Server
 > Follow the steps per this document to configure MCP Server for SQLcli: 
