@@ -1,5 +1,5 @@
 """Pytest configuration and fixtures."""
-import pytest,OS
+import pytest,os
 
 from pathlib import Path
 from dotenv import load_dotenv
