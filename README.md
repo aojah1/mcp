@@ -2,14 +2,14 @@
 
 #### MCP Client:
 
-    https://github.com/aojah1/mcp/blob/main/mcp_client/README.md
+https://github.com/aojah1/mcp/blob/main/mcp_client/README.md
 
 #### MCP Servers
 
-    > Oracle DB Tools
+##### Oracle DB Tools
 
-    https://github.com/aojah1/mcp/blob/main/mcp_server/dbtools-mcp-server/README.md
+https://github.com/aojah1/mcp/blob/main/mcp_server/dbtools-mcp-server/README.md
 
-    >  Slack
+##### Slack
 
-    https://github.com/aojah1/mcp/blob/main/mcp_server/slack-mcp-server/README.md
+https://github.com/aojah1/mcp/blob/main/mcp_server/slack-mcp-server/README.md
