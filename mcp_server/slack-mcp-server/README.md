@@ -1,16 +1,20 @@
-# MCP Demo
+# Slack MCP Server
 
-This repository contains the MCP (Model Control Protocol) demonstration project.
+This repository contains the MCP (Model Control Protocol) code to deploy Slack Tools
 
 ## Project Structure
 
-```
-mcp-demo/
-├── main.py         # Main application entry point
-├── tools/          # Utility tools and helper functions
-├── tests/          # Test suite
-├── .env           # Environment variables (not tracked in git)
-└── pyproject.toml  # Project dependencies and configuration
+``` 
+slack-mcp-server/
+├── requirements.txt        # install dependencies
+├── config
+    ├── .env                # Environment variables (not tracked in git)
+├── src
+    ├── main.py             # Main application entry point
+    ├── tools/              # Utility tools
+    ├── tests/              # Test suite
+    ├── utls/
+        ├── utils_mcp.py    # helper functions
 ```
 
 ## Setup
