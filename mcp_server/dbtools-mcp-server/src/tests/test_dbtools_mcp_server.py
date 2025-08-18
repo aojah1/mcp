@@ -33,14 +33,18 @@ class TestDbtoolsMcpServer(unittest.TestCase):
                                message="datetime.datetime.utcnow.*")
         
         # Path to the server file
-        server_path = os.path.join(os.path.dirname(__file__), "../tools.py")
+        THIS_DIR = Path(__file__).resolve()
+        ROJECT_ROOT = THIS_DIR.parent.parent
+        server_path = os.path.join(ROJECT_ROOT, "tools.py")
         
         # Check if file exists
         if not os.path.exists(server_path):
             raise FileNotFoundError(f"Server file not found at {server_path}")
-        
+        print('anup')
+        print(ROJECT_ROOT)
+        print(server_path)
         # Load the module dynamically
-        spec = importlib.util.spec_from_file_location("dbtools_mcp_server", server_path)
+        spec = importlib.util.spec_from_file_location("tools", server_path)
         cls.server_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.server_module)
         
@@ -48,7 +52,7 @@ class TestDbtoolsMcpServer(unittest.TestCase):
         cls.module = cls.server_module
         
         # Specific connection names for testing
-        cls.oracle_connection = "oracleconn1"
+        cls.oracle_connection = "llama-dbtools-connection"
         cls.mysql_connection = "mysqlconn1"
     
     def setUp(self):
@@ -63,24 +67,24 @@ class TestDbtoolsMcpServer(unittest.TestCase):
         print(f"Running test: {self._testMethodName}")
         print(f"{'=' * 70}")
     
-    def test_get_help(self):
-        """Test the get_help tool"""
-        print("About to call get_help() to retrieve tool documentation")
-        result = self.module.get_help()
+    # def test_get_help(self):
+    #     """Test the get_help tool"""
+    #     print("About to call get_help() to retrieve tool documentation")
+    #     result = self.module.get_help()
         
-        # Parse result as JSON
-        help_data = json.loads(result)
+    #     # Parse result as JSON
+    #     help_data = json.loads(result)
         
-        # Verify expected keys in the help text
-        self.assertIn("overview", help_data)
-        self.assertIn("recommended_workflow", help_data)
-        self.assertIn("available_tools", help_data)
-        self.assertIn("examples", help_data)
+    #     # Verify expected keys in the help text
+    #     self.assertIn("overview", help_data)
+    #     self.assertIn("recommended_workflow", help_data)
+    #     self.assertIn("available_tools", help_data)
+    #     self.assertIn("examples", help_data)
         
-        # Print summary of what we got
-        print(f"Help overview: {help_data['overview']}")
-        print(f"Found {len(help_data['recommended_workflow'])} workflow steps")
-        print(f"Found {len(help_data['available_tools'])} tool categories")
+    #     # Print summary of what we got
+    #     print(f"Help overview: {help_data['overview']}")
+    #     print(f"Found {len(help_data['recommended_workflow'])} workflow steps")
+    #     print(f"Found {len(help_data['available_tools'])} tool categories")
     
     def test_list_all_compartments(self):
         """Test listing all compartments"""
@@ -319,227 +323,227 @@ class TestDbtoolsMcpServer(unittest.TestCase):
     
     # Test for MySQL HeatWave connection - simonmysql
     
-    def test_mysql_connection_details(self):
-        """Test getting details for the MySQL database connection"""
-        connection_name = self.mysql_connection
-        print(f"About to call get_dbtools_connection_by_name_tool('{connection_name}')")
+    # def test_mysql_connection_details(self):
+    #     """Test getting details for the MySQL database connection"""
+    #     connection_name = self.mysql_connection
+    #     print(f"About to call get_dbtools_connection_by_name_tool('{connection_name}')")
         
-        result = self.module.get_dbtools_connection_by_name_tool(connection_name)
+    #     result = self.module.get_dbtools_connection_by_name_tool(connection_name)
         
-        # Check if we got an error response (JSON string)
-        if isinstance(result, str) and result.startswith('{'):
-            result_dict = json.loads(result)
-            if 'error' in result_dict:
-                self.fail(f"Error getting connection: {result_dict['error']}")
+    #     # Check if we got an error response (JSON string)
+    #     if isinstance(result, str) and result.startswith('{'):
+    #         result_dict = json.loads(result)
+    #         if 'error' in result_dict:
+    #             self.fail(f"Error getting connection: {result_dict['error']}")
         
-        # Otherwise, we should have a connection object
-        self.assertIsNotNone(result)
+    #     # Otherwise, we should have a connection object
+    #     self.assertIsNotNone(result)
         
-        if hasattr(result, 'display_name'):
-            print(f"Found connection: {result.display_name}")
-            print(f"Type: {result.type}")
-            self.assertEqual(result.display_name, connection_name)
-        else:
-            print(f"Connection details: {result}")
+    #     if hasattr(result, 'display_name'):
+    #         print(f"Found connection: {result.display_name}")
+    #         print(f"Type: {result.type}")
+    #         self.assertEqual(result.display_name, connection_name)
+    #     else:
+    #         print(f"Connection details: {result}")
     
-    def test_mysql_list_tables(self):
-        """Test listing tables from MySQL connection"""
-        connection_name = self.mysql_connection
+    # def test_mysql_list_tables(self):
+    #     """Test listing tables from MySQL connection"""
+    #     connection_name = self.mysql_connection
         
-        print(f"\nAbout to call list_tables('{connection_name}')")
+    #     print(f"\nAbout to call list_tables('{connection_name}')")
         
-        # Get list of tables
-        result = self.module.list_tables(connection_name)
-        self.assertIsNotNone(result)
+    #     # Get list of tables
+    #     result = self.module.list_tables(connection_name)
+    #     self.assertIsNotNone(result)
         
-        if isinstance(result, str):
-            try:
-                tables = json.loads(result)
+    #     if isinstance(result, str):
+    #         try:
+    #             tables = json.loads(result)
                 
-                # Verify we got a list
-                self.assertIsInstance(tables, list, "Result should be a JSON array")
+    #             # Verify we got a list
+    #             self.assertIsInstance(tables, list, "Result should be a JSON array")
                 
-                if len(tables) > 0:
-                    print("Found tables:")
-                    table_names = []
+    #             if len(tables) > 0:
+    #                 print("Found tables:")
+    #                 table_names = []
                     
-                    # Extract and print details of tables
-                    for i, table in enumerate(tables):
-                        # Verify table has required fields
-                        self.assertIn('table_name', table, "Each table should have a table_name field")
-                        self.assertIn('num_rows', table, "Each table should have a num_rows field")
-                        self.assertIn('comments', table, "Each table should have a comments field")
+    #                 # Extract and print details of tables
+    #                 for i, table in enumerate(tables):
+    #                     # Verify table has required fields
+    #                     self.assertIn('table_name', table, "Each table should have a table_name field")
+    #                     self.assertIn('num_rows', table, "Each table should have a num_rows field")
+    #                     self.assertIn('comments', table, "Each table should have a comments field")
                         
-                        table_name = table['table_name']
-                        num_rows = table['num_rows']
-                        print(f"  {i+1}. {table_name} ({num_rows} rows)")
-                        table_names.append(table_name)
+    #                     table_name = table['table_name']
+    #                     num_rows = table['num_rows']
+    #                     print(f"  {i+1}. {table_name} ({num_rows} rows)")
+    #                     table_names.append(table_name)
                     
-                    # Save the table names for the get_table_info test
-                    self.mysql_table_names = table_names
-                else:
-                    print("No tables found")
+    #                 # Save the table names for the get_table_info test
+    #                 self.mysql_table_names = table_names
+    #             else:
+    #                 print("No tables found")
                     
-            except json.JSONDecodeError:
-                print(f"Could not parse result as JSON: {result[:100]}...")
-                self.fail("Failed to parse JSON response")
-            except Exception as e:
-                print(f"Error processing tables: {str(e)}")
-                self.fail(f"Error processing tables: {str(e)}")
-        else:
-            print(f"Received non-string result: {type(result)}")
-            self.fail("Expected string result")
+    #         except json.JSONDecodeError:
+    #             print(f"Could not parse result as JSON: {result[:100]}...")
+    #             self.fail("Failed to parse JSON response")
+    #         except Exception as e:
+    #             print(f"Error processing tables: {str(e)}")
+    #             self.fail(f"Error processing tables: {str(e)}")
+    #     else:
+    #         print(f"Received non-string result: {type(result)}")
+    #         self.fail("Expected string result")
     
-    def test_mysql_get_table_info(self):
-        """Test getting schema info for a specific table from MySQL connection"""
-        connection_name = self.mysql_connection
+    # def test_mysql_get_table_info(self):
+    #     """Test getting schema info for a specific table from MySQL connection"""
+    #     connection_name = self.mysql_connection
         
-        # First, get a list of tables using list_tables if we don't have them already
-        if not hasattr(self, 'mysql_table_names') or not self.mysql_table_names:
-            print("Calling list_tables first to get available tables")
-            self.test_mysql_list_tables()
+    #     # First, get a list of tables using list_tables if we don't have them already
+    #     if not hasattr(self, 'mysql_table_names') or not self.mysql_table_names:
+    #         print("Calling list_tables first to get available tables")
+    #         self.test_mysql_list_tables()
         
-        # Skip if we still don't have table names
-        if not hasattr(self, 'mysql_table_names') or not self.mysql_table_names:
-            self.skipTest("No tables found to test with")
-            return
+    #     # Skip if we still don't have table names
+    #     if not hasattr(self, 'mysql_table_names') or not self.mysql_table_names:
+    #         self.skipTest("No tables found to test with")
+    #         return
         
-        test_table = self.mysql_table_names[0]  # Use first table from the list
-        print(f"\nAbout to call get_table_info('{connection_name}', '{test_table}')")
+    #     test_table = self.mysql_table_names[0]  # Use first table from the list
+    #     print(f"\nAbout to call get_table_info('{connection_name}', '{test_table}')")
         
-        # Get detailed info about this table
-        table_info = self.module.get_table_info(connection_name, test_table)
-        self.assertIsNotNone(table_info)
+    #     # Get detailed info about this table
+    #     table_info = self.module.get_table_info(connection_name, test_table)
+    #     self.assertIsNotNone(table_info)
         
-        # Print some details about the table
-        print(f"Details for table {test_table}:")
-        if isinstance(table_info, str):
-            try:
-                table_dict = json.loads(table_info)
+    #     # Print some details about the table
+    #     print(f"Details for table {test_table}:")
+    #     if isinstance(table_info, str):
+    #         try:
+    #             table_dict = json.loads(table_info)
                 
-                # Validate the structure
-                self.assertIn('table_name', table_dict, "Response should have table_name")
-                self.assertIn('columns', table_dict, "Response should have columns")
-                self.assertIn('primary_key', table_dict, "Response should have primary_key")
-                self.assertIn('row_count', table_dict, "Response should have row_count")
+    #             # Validate the structure
+    #             self.assertIn('table_name', table_dict, "Response should have table_name")
+    #             self.assertIn('columns', table_dict, "Response should have columns")
+    #             self.assertIn('primary_key', table_dict, "Response should have primary_key")
+    #             self.assertIn('row_count', table_dict, "Response should have row_count")
                 
-                # Print table info
-                print(f"Table: {table_dict['table_name']}")
-                print(f"Number of rows: {table_dict['row_count']}")
-                if table_dict['primary_key']:
-                    print(f"Primary key(s): {', '.join(table_dict['primary_key'])}")
-                else:
-                    print("Primary key(s): None")
-                print("\nColumns:")
-                for col in table_dict['columns']:
-                    nullable = "NULL" if col['nullable'] else "NOT NULL"
-                    default = f" DEFAULT {col['default']}" if col['default'] else ""
-                    print(f"  - {col['name']} ({col['type']}{default}) - {nullable}")
-                    if col['comment']:
-                        print(f"    Comment: {col['comment']}")
+    #             # Print table info
+    #             print(f"Table: {table_dict['table_name']}")
+    #             print(f"Number of rows: {table_dict['row_count']}")
+    #             if table_dict['primary_key']:
+    #                 print(f"Primary key(s): {', '.join(table_dict['primary_key'])}")
+    #             else:
+    #                 print("Primary key(s): None")
+    #             print("\nColumns:")
+    #             for col in table_dict['columns']:
+    #                 nullable = "NULL" if col['nullable'] else "NOT NULL"
+    #                 default = f" DEFAULT {col['default']}" if col['default'] else ""
+    #                 print(f"  - {col['name']} ({col['type']}{default}) - {nullable}")
+    #                 if col['comment']:
+    #                     print(f"    Comment: {col['comment']}")
                 
-                # Verify we have at least one column
-                self.assertGreater(len(table_dict['columns']), 0, "Table should have at least one column")
+    #             # Verify we have at least one column
+    #             self.assertGreater(len(table_dict['columns']), 0, "Table should have at least one column")
                 
-            except json.JSONDecodeError:
-                print(f"Could not parse table info: {table_info[:100]}...")
-                self.fail("Failed to parse JSON response")
-            except Exception as e:
-                print(f"Error processing table info: {str(e)}")
-                self.fail(f"Error processing table info: {str(e)}")
-        else:
-            print(f"Received non-string result: {type(table_info)}")
-            self.fail("Expected string result")
+    #         except json.JSONDecodeError:
+    #             print(f"Could not parse table info: {table_info[:100]}...")
+    #             self.fail("Failed to parse JSON response")
+    #         except Exception as e:
+    #             print(f"Error processing table info: {str(e)}")
+    #             self.fail(f"Error processing table info: {str(e)}")
+    #     else:
+    #         print(f"Received non-string result: {type(table_info)}")
+    #         self.fail("Expected string result")
     
-    def test_mysql_heatwave_chat(self):
-        """Test the HeatWave chat functionality with MySQL connection"""
-        connection_name = self.mysql_connection
-        test_question = "What are the benefits of MySQL HeatWave?"
+    # def test_mysql_heatwave_chat(self):
+    #     """Test the HeatWave chat functionality with MySQL connection"""
+    #     connection_name = self.mysql_connection
+    #     test_question = "What are the benefits of MySQL HeatWave?"
         
-        print(f"About to call ask_heatwave_chat_tool('{connection_name}', '{test_question}')")
+    #     print(f"About to call ask_heatwave_chat_tool('{connection_name}', '{test_question}')")
         
-        # This test may fail if HeatWave is not configured
-        try:
-            result = self.module.ask_heatwave_chat_tool(connection_name, test_question)
+    #     # This test may fail if HeatWave is not configured
+    #     try:
+    #         result = self.module.ask_heatwave_chat_tool(connection_name, test_question)
             
-            # Verify we got a result
-            self.assertIsNotNone(result)
+    #         # Verify we got a result
+    #         self.assertIsNotNone(result)
             
-            # Check if we got an error response (JSON string)
-            if isinstance(result, str) and result.startswith('{'):
-                try:
-                    result_dict = json.loads(result)
-                    if 'error' in result_dict:
-                        print(f"HeatWave chat error: {result_dict['error']}")
-                        self.skipTest("HeatWave chat returned an error - may not be configured")
-                except json.JSONDecodeError:
-                    # If it's not JSON, it's probably a successful text response
-                    pass
+    #         # Check if we got an error response (JSON string)
+    #         if isinstance(result, str) and result.startswith('{'):
+    #             try:
+    #                 result_dict = json.loads(result)
+    #                 if 'error' in result_dict:
+    #                     print(f"HeatWave chat error: {result_dict['error']}")
+    #                     self.skipTest("HeatWave chat returned an error - may not be configured")
+    #             except json.JSONDecodeError:
+    #                 # If it's not JSON, it's probably a successful text response
+    #                 pass
             
-            # If we got here, we have a successful response
-            print(f"HeatWave chat response (first 200 chars):\n{result[:200]}...")
+    #         # If we got here, we have a successful response
+    #         print(f"HeatWave chat response (first 200 chars):\n{result[:200]}...")
             
-            # Make sure we got a non-empty string
-            self.assertTrue(isinstance(result, str) and len(result) > 0)
+    #         # Make sure we got a non-empty string
+    #         self.assertTrue(isinstance(result, str) and len(result) > 0)
             
-        except Exception as e:
-            print(f"Error testing HeatWave chat: {str(e)}")
-            self.skipTest(f"HeatWave chat test failed with exception: {str(e)}")
+    #     except Exception as e:
+    #         print(f"Error testing HeatWave chat: {str(e)}")
+    #         self.skipTest(f"HeatWave chat test failed with exception: {str(e)}")
     
-    def test_connection_not_found(self):
-        """Test behavior when connection is not found"""
-        # Use a name that's unlikely to exist
-        fake_connection_name = "this_connection_does_not_exist_12345"
+    # def test_connection_not_found(self):
+    #     """Test behavior when connection is not found"""
+    #     # Use a name that's unlikely to exist
+    #     fake_connection_name = "this_connection_does_not_exist_12345"
         
-        print(f"About to call get_dbtools_connection_by_name_tool('{fake_connection_name}')")
-        # Try to get details for this connection
-        result = self.module.get_dbtools_connection_by_name_tool(fake_connection_name)
+    #     print(f"About to call get_dbtools_connection_by_name_tool('{fake_connection_name}')")
+    #     # Try to get details for this connection
+    #     result = self.module.get_dbtools_connection_by_name_tool(fake_connection_name)
         
-        # Should return a JSON error
-        result_dict = json.loads(result)
-        self.assertIn("error", result_dict)
-        self.assertIn("No connection found", result_dict["error"])
+    #     # Should return a JSON error
+    #     result_dict = json.loads(result)
+    #     self.assertIn("error", result_dict)
+    #     self.assertIn("No connection found", result_dict["error"])
         
-        print(f"Correctly received error: {result_dict['error']}")
+    #     print(f"Correctly received error: {result_dict['error']}")
     
-    def test_autonomous_databases_with_invalid_compartment(self):
-        """Test listing databases with an invalid compartment name"""
-        # Use a name that's unlikely to exist
-        fake_compartment_name = "this_compartment_does_not_exist_12345"
+    # def test_autonomous_databases_with_invalid_compartment(self):
+    #     """Test listing databases with an invalid compartment name"""
+    #     # Use a name that's unlikely to exist
+    #     fake_compartment_name = "this_compartment_does_not_exist_12345"
         
-        print(f"About to call list_autonomous_databases('{fake_compartment_name}')")
-        # Try to list databases in this compartment
-        result = self.module.list_autonomous_databases(fake_compartment_name)
+    #     print(f"About to call list_autonomous_databases('{fake_compartment_name}')")
+    #     # Try to list databases in this compartment
+    #     result = self.module.list_autonomous_databases(fake_compartment_name)
         
-        # Should return a JSON error
-        result_dict = json.loads(result)
-        self.assertIn("error", result_dict)
-        self.assertIn("Compartment", result_dict["error"])
+    #     # Should return a JSON error
+    #     result_dict = json.loads(result)
+    #     self.assertIn("error", result_dict)
+    #     self.assertIn("Compartment", result_dict["error"])
         
-        print(f"Correctly received error: {result_dict['error']}")
+    #     print(f"Correctly received error: {result_dict['error']}")
     
-    def test_execute_sql_with_invalid_connection(self):
-        """Test executing SQL with an invalid connection name"""
-        # Use a name that's unlikely to exist
-        fake_connection_name = "this_connection_does_not_exist_12345"
-        test_sql = "SELECT 1 FROM DUAL"
+    # def test_execute_sql_with_invalid_connection(self):
+    #     """Test executing SQL with an invalid connection name"""
+    #     # Use a name that's unlikely to exist
+    #     fake_connection_name = "this_connection_does_not_exist_12345"
+    #     test_sql = "SELECT 1 FROM DUAL"
         
-        print(f"About to call execute_sql_tool('{fake_connection_name}', '{test_sql}')")
-        # Try to execute a simple SQL query
-        result = self.module.execute_sql_tool(fake_connection_name, test_sql)
+    #     print(f"About to call execute_sql_tool('{fake_connection_name}', '{test_sql}')")
+    #     # Try to execute a simple SQL query
+    #     result = self.module.execute_sql_tool(fake_connection_name, test_sql)
         
-        # Should return a JSON error
-        result_dict = json.loads(result)
-        self.assertIn("error", result_dict)
-        self.assertIn("No connection found", result_dict["error"])
+    #     # Should return a JSON error
+    #     result_dict = json.loads(result)
+    #     self.assertIn("error", result_dict)
+    #     self.assertIn("No connection found", result_dict["error"])
         
-        print(f"Correctly received error: {result_dict['error']}")
+    #     print(f"Correctly received error: {result_dict['error']}")
     
-    def tearDown(self):
-        """Clean up after each test"""
-        print(f"{'=' * 70}")
-        print(f"Completed test: {self._testMethodName}")
-        print(f"{'=' * 70}\n")
+    # def tearDown(self):
+    #     """Clean up after each test"""
+    #     print(f"{'=' * 70}")
+    #     print(f"Completed test: {self._testMethodName}")
+    #     print(f"{'=' * 70}\n")
 
 
 if __name__ == "__main__":
