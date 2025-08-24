@@ -34,11 +34,11 @@ podman logs -f oracle-free   # watch startup
 # 9) Connect
 #### Default services: FREE (CDB) and FREEPDB1 (PDB). Example with SQL*Plus/SQLcl:
 
-sqlplus sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
+sql sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
 
 # or inside the container
 podman exec -it oracle-free bash
-sqlplus sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
+sql sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
 
 # 10 ) Final step to enable MCP 
-conn -save cline_mcp -savepwd sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
+conn -save demo_mcp_sys -savepwd sys/Oracle_123@localhost:1521/FREEPDB1 as sysdba
