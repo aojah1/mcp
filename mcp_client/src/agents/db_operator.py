@@ -31,7 +31,8 @@ from src.prompt_engineering.topics.db_operator import promt_oracle_db_operator
 from src.llm.oci_genai_agent import rag_agent_service
 from langchain_core.tools import tool
 from langchain_core.agents import AgentFinish
-
+import matplotlib
+matplotlib.use("Agg")
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -51,6 +52,7 @@ AGENT_SERVICE_EP = os.getenv("AGENT_SERVICE_EP")
 AGENT_KB_ID = os.getenv("AGENT_KB_ID")
 AGENT_REGION = os.getenv("AGENT_REGION")
 SQLCLI_MCP_PROFILE = os.getenv("SQLCLI_MCP_PROFILE")
+TAVILY_MCP_SERVER = os.getenv("TAVILY_MCP_SERVER")
 
 # ────────────────────────────────────────────────────────
 # 2) Logic
@@ -63,6 +65,15 @@ adb_server = StdioServerParameters(
     command=SQLCLI_MCP_PROFILE, args=["-mcp"]
 )
 
+# Use npx
+local_file_server= StdioServerParameters(
+    command="npx",
+    args=["-y", "@modelcontextprotocol/server-filesystem", "/Users/aojah/Documents/GenAI-CoE/Agentic-Framework/demo-cloud-world"])
+
+# Use npx
+tavily_server = StdioServerParameters(
+    command="npx",
+    args=["-y", "mcp-remote", TAVILY_MCP_SERVER])
 
 # Global Auto-Approve flag (will be set dynamically)
 AUTO_APPROVE = 'N'  # Default to 'N'
@@ -124,10 +135,23 @@ def user_confirmed_tool(tool):
         coroutine=wrapper,
     )
 
+@tool
+def run_python(code: str) -> dict:
+    """
+        Tool to run any python code by building a sandbox to execute code. This tool can also be used to plot graphs and maps.
+    """
+    import io, contextlib, traceback
+    ns, out, err = {}, io.StringIO(), io.StringIO()
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            exec(code, {}, ns)
+        return {"ok": True, "result": ns.get("result"), "stdout": out.getvalue(), "stderr": err.getvalue()}
+    except Exception:
+        return {"ok": False, "error": traceback.format_exc(), "stdout": out.getvalue(), "stderr": err.getvalue()}
 
 @tool
 def _rag_agent_service(inp: str):
-    """RAG AGENT"""
+    """RAG AGENT Service to answer questions from Knowledge base"""
     response  = rag_agent_service(inp)
 
     return response.data.message.content.text
@@ -145,15 +169,44 @@ async def main() -> None:
             print(f"\n❌ Could not connect to Oracle SQLCL MCP Server: {conn_err}")
             print("⚠️  You can continue asking questions, but SQL tools will be unavailable.\n")
 
+        # Attempt Tavily MCP connection
+        try:
+            tavily_read, tavily_write = await stack.enter_async_context(stdio_client(tavily_server))
+            tavily_server_session = await stack.enter_async_context(ClientSession(tavily_read, tavily_write))
+            await tavily_server_session.initialize()
+        except Exception as tavily_conn_err:
+            print(f"\n❌ Could not connect to Tavily MCP Server: {tavily_conn_err}")
+            print("⚠️  You can continue asking questions, but Tavily tools will be unavailable.\n")
+
+        # Attempt Local File Server MCP connection
+        try:
+            local_file_read, local_file_write = await stack.enter_async_context(stdio_client(local_file_server))
+            local_file_session = await stack.enter_async_context(ClientSession(local_file_read, local_file_write))
+            await local_file_session.initialize()
+        except Exception as tavily_conn_err:
+            print(f"\n❌ Could not connect to Local File Server MCP Server: {tavily_conn_err}")
+            print("⚠️  You can continue asking questions, but Local File Server tools will be unavailable.\n")
+
         try:
             # Load tools
-            original_tools = await load_mcp_tools(adb_session)
+            mcp_tools = []
+
+            # original_tools = [await load_mcp_tools(adb_session), await load_mcp_tools(tavily_server_session)]
+            if adb_session is not None:
+                mcp_tools.extend(await load_mcp_tools(adb_session))
+
+            if 'tavily_server_session' in locals() and tavily_server_session is not None:
+                mcp_tools.extend(await load_mcp_tools(tavily_server_session))
+
+            if 'local_file_session' in locals() and local_file_session is not None:
+                mcp_tools.extend(await load_mcp_tools(local_file_session))
+            
             tools = []
 
             def is_sql_tool(tool):
                 return any(kw in tool.name.lower() for kw in ["adb", "sql", "oracle"])
 
-            for t in original_tools:
+            for t in mcp_tools:
                 if is_sql_tool(t):
                     wrapped = user_confirmed_tool(t)
                     wrapped.name = t.name  # overwrite name so "run-sqlcl" matches
@@ -161,6 +214,7 @@ async def main() -> None:
                 else:
                     tools.append(t)
 
+            tools.append(run_python)  # Add your Python tool
             tools.append(_rag_agent_service)  # Add your RAG tool
 
             print(f"✅ Registered tools: {[t.name for t in tools]}")
