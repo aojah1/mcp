@@ -23,12 +23,12 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_core.messages import HumanMessage
 # For OCI GenAI Service
-from langchain_community.chat_models.oci_generative_ai import ChatOCIGenAI
 from langchain.agents import initialize_agent, Tool, AgentType
 from langchain_core.messages import AIMessage
 from src.llm.oci_genai import initialize_llm
 from src.prompt_engineering.topics.db_operator import promt_oracle_db_operator
-from src.llm.oci_genai_agent import rag_agent_service
+from src.tools.rag_agent import _rag_agent_service
+from src.tools.python_scratchpad import run_python
 from langchain_core.tools import tool
 from langchain_core.agents import AgentFinish
 import matplotlib
@@ -53,6 +53,8 @@ AGENT_KB_ID = os.getenv("AGENT_KB_ID")
 AGENT_REGION = os.getenv("AGENT_REGION")
 SQLCLI_MCP_PROFILE = os.getenv("SQLCLI_MCP_PROFILE")
 TAVILY_MCP_SERVER = os.getenv("TAVILY_MCP_SERVER")
+FILE_SYSTEM_ACCESS_KEY=os.getenv("FILE_SYSTEM_ACCESS_KEY")
+print(FILE_SYSTEM_ACCESS_KEY)
 
 # ────────────────────────────────────────────────────────
 # 2) Logic
@@ -68,7 +70,7 @@ adb_server = StdioServerParameters(
 # Use npx
 local_file_server= StdioServerParameters(
     command="npx",
-    args=["-y", "@modelcontextprotocol/server-filesystem", "/Users/aojah/Documents/GenAI-CoE/Agentic-Framework/demo-cloud-world"])
+    args=["-y", "@modelcontextprotocol/server-filesystem", FILE_SYSTEM_ACCESS_KEY])
 
 # Use npx
 tavily_server = StdioServerParameters(
@@ -135,26 +137,7 @@ def user_confirmed_tool(tool):
         coroutine=wrapper,
     )
 
-@tool
-def run_python(code: str) -> dict:
-    """
-        Tool to run any python code by building a sandbox to execute code. This tool can also be used to plot graphs and maps.
-    """
-    import io, contextlib, traceback
-    ns, out, err = {}, io.StringIO(), io.StringIO()
-    try:
-        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            exec(code, {}, ns)
-        return {"ok": True, "result": ns.get("result"), "stdout": out.getvalue(), "stderr": err.getvalue()}
-    except Exception:
-        return {"ok": False, "error": traceback.format_exc(), "stdout": out.getvalue(), "stderr": err.getvalue()}
 
-@tool
-def _rag_agent_service(inp: str):
-    """RAG AGENT Service to answer questions from Knowledge base"""
-    response  = rag_agent_service(inp)
-
-    return response.data.message.content.text
 
 async def main() -> None:
     async with AsyncExitStack() as stack:

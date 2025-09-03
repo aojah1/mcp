@@ -1,3 +1,8 @@
 oci
 requests
-fastmcp
+mcp>=1.11,<1.12 
+fastmcp>=2.5,<2.6
+uvicorn>=0.30.0 
+anyio>=4.4,<5 
+httpx>=0.27
+

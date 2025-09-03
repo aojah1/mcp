@@ -13,20 +13,30 @@ def grok():
     # Application Command line(no parameter needed)
     # python chat_demo.py
     ##########################################################################
-    import oci
+    import oci, os
 
-    # Setup basic variables
-    # Auth Config
-    # TODO: Please update config profile name and use the compartmentId that has policies grant permissions for using Generative AI Service
-    compartment_id = "ocid1.compartment.oc1..aaaaaaaau6esoygdsqxfz6iv3u7ghvosfskyvd6kroucemvyr5wzzjcw6aaa"
-    CONFIG_PROFILE = "DEFAULT"
-    config = oci.config.from_file('~/.oci/config', CONFIG_PROFILE)
+    # ─── OCI LLM ──────────────────────────────────────────
+    from langchain_community.chat_models import ChatOCIGenAI
+    from dotenv import load_dotenv
 
-    # Service endpoint
-    endpoint = "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+    # ────────────────────────────────────────────────────────
+    # 1) bootstrap paths + env + llm
+    # ────────────────────────────────────────────────────────
+    THIS_DIR     = Path(__file__).resolve()
+    PROJECT_ROOT = THIS_DIR.parent.parent.parent
+    print(PROJECT_ROOT)
+    load_dotenv(PROJECT_ROOT / "config/.env")
 
-    generative_ai_inference_client = oci.generative_ai_inference.GenerativeAiInferenceClient(config=config,
-                                                                                             service_endpoint=endpoint,
+    #────────────────────────────────────────────────────────
+    # OCI GenAI configuration
+    # ────────────────────────────────────────────────────────
+    COMPARTMENT_ID  = os.getenv("OCI_COMPARTMENT_ID")
+    ENDPOINT        = os.getenv("OCI_GENAI_ENDPOINT")
+    OCI_CONFIG_FILE = os.getenv("OCI_CONFIG_FILE")
+    OCI_GENAI_MODEL_ID_GROK = os.getenv("OCI_GENAI_MODEL_ID_GROK")
+
+    generative_ai_inference_client = oci.generative_ai_inference.GenerativeAiInferenceClient(config=OCI_CONFIG_FILE,
+                                                                                             service_endpoint=ENDPOINT,
                                                                                              retry_strategy=oci.retry.NoneRetryStrategy(),
                                                                                              timeout=(10, 240))
     chat_detail = oci.generative_ai_inference.models.ChatDetails()
@@ -47,9 +57,9 @@ def grok():
     chat_request.top_p = 1
 
     chat_detail.serving_mode = oci.generative_ai_inference.models.OnDemandServingMode(
-        model_id="ocid1.generativeaimodel.oc1.us-chicago-1.amaaaaaask7dceya6dvgvvj3ovy4lerdl6fvx525x3yweacnrgn4ryfwwcoq")
+        model_id=OCI_GENAI_MODEL_ID_GROK)
     chat_detail.chat_request = chat_request
-    chat_detail.compartment_id = compartment_id
+    chat_detail.compartment_id = COMPARTMENT_ID
 
     chat_response = generative_ai_inference_client.chat(chat_detail)
 

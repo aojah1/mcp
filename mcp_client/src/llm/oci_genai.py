@@ -32,7 +32,7 @@ def initialize_llm():
             provider=PROVIDER,
             model_kwargs={
                 "temperature": 0.5,
-                "max_tokens": 1000,
+                "max_tokens": 3000,
                 # remove any unsupported kwargs like citation_types
             },
             auth_type=AUTH_TYPE,
