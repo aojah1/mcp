@@ -51,7 +51,7 @@ class OracleDBToolsMCPServer:
         # By default this app handles /mcp inside itself.
         app = mcp.streamable_http_app()
         # Run the ASGI app directly
-        uvicorn.run(app, host="127.0.0.1", port=8001)
+        uvicorn.run(app, host="0.0.0.0", port=8001)
 
 @mcp.tool()
 def ping() -> str:

@@ -45,18 +45,33 @@ conn -save demo_mcp_sys -savepwd sys/Oracle_123@localhost:1521/FREEPDB1 as sysdb
 
 
 # Connect to ADB using wallet
-sql /nolog
-set cloudconfig /etc/ords/config/Wallet_<dbname>.zip 
-show tns #if it is from wallet
-conn user/pwd@db_high
-conn -save myconn -savepwd
-CONNMGR LIST
-cm list
-cm show myconn
-connmgr test myconn
-CONNECT myconn
-show connection
-show user
-show user con_name
-conn -n conn_name
-CONNMGR DELETE -conn myconn
+> 
+  sql /nolog
+
+  set cloudconfig /etc/ords/config/Wallet_<dbname>.zip 
+
+  show tns #if it is from wallet
+
+  conn user/pwd@db_high
+
+  conn -save myconn -savepwd
+
+  CONNMGR LIST
+
+  cm list
+
+  cm show myconn
+
+  connmgr test myconn
+
+  CONNECT myconn
+
+  show connection
+
+  show user
+
+  show user con_name
+
+  conn -n conn_name
+  
+  CONNMGR DELETE -conn myconn
